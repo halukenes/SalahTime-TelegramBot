@@ -3,10 +3,12 @@ import requests
 import time
 import urllib
 
-TOKEN     = "584920327:AAGKd2EDjQyIwyEwLalcMBnlMYZj6xF3K_s"
-URL       = "https://api.telegram.org/bot{}/".format(TOKEN)
+from dbhelper import DBHelper
 
+db = DBHelper()
 
+TOKEN = "584920327:AAGKd2EDjQyIwyEwLalcMBnlMYZj6xF3K_s"
+URL = "https://api.telegram.org/bot{}/".format(TOKEN)
 
 
 def get_url(url):
@@ -36,14 +38,27 @@ def get_last_update_id(updates):
     return max(update_ids)
 
 
-def echo_all(updates):
+def handle_updates(updates):
     for update in updates["result"]:
-        text = update["message"]["text"]
-        chat = update["message"]["chat"]["id"]
-        if text == "/start":
-            textkeyboard = ["Ezan ne zaman okunacak", "deneme2", "deneme3"]
-            keyboard = build_keyboard(textkeyboard)
-            send_message("Welcome to Salah Time Bot, this is for ...", chat, keyboard)
+        try:
+            text = update["message"]["text"]
+            chat = update["message"]["chat"]["id"]
+            if text == "/start" or text == "merhaba":
+                textkeyboard = ["/ezan", "/sure", "/ayarlar"]
+                keyboard = build_keyboard(textkeyboard)
+                send_message(
+                    "Ezan vakti botuna hoşgeldin. Bana ezanın ne zaman okunacağı sorabilir veya sana göstermemi "
+                    "istediğin bir ayet veya sure gösterebilirim. Komut olarak da /ezan yazarak ezan vaktine kaç "
+                    "dakika kaldığını, /sure yazarak sureleri ve /ayarlar yazarak bot tercihlerini "
+                    "değiştirebilirsin.", chat, keyboard)
+            elif text == "/ayarlar":
+                textkeyboard = ["/dil", "/konum", "/bildirim"]
+                keyboard = build_keyboard(textkeyboard)
+                send_message(
+                    "Tercihlerini değiştirmek için aşağıdakilerden birisini seçebilirsin veya bir dahaki sefere "
+                    "direk bunları bana yazabilirsin.", chat, keyboard)
+        except KeyError:
+            pass
 
 
 def get_last_chat_id_and_text(updates):
@@ -66,6 +81,7 @@ def send_message(text, chat_id, reply_markup=None):
     if reply_markup:
         url += "&reply_markup={}".format(reply_markup)
     get_url(url)
+    print(url)
 
 
 def main():
@@ -74,7 +90,7 @@ def main():
         updates = get_updates(last_update_id)
         if len(updates["result"]) > 0:
             last_update_id = get_last_update_id(updates) + 1
-            echo_all(updates)
+            handle_updates(updates)
         time.sleep(0.5)
 
 
