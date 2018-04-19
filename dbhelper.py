@@ -7,18 +7,14 @@ class DBHelper:
         self.conn = sqlite3.connect(dbname)
 
     def setup(self):
-        tbluser = "CREATE TABLE IF NOT EXISTS users (" \
-                  "userID varchar(20), " \
-                  "locationLAT decimal(9,6)), " \
-                  "locationLONG decimal(9,6), " \
-                  "lang varchar(10), " \
-                  "notPeriod int) "
+        tbluser = "CREATE TABLE IF NOT EXISTS users (userID varchar(20), locationLAT decimal(9,6), locationLONG " \
+                  "decimal(9,6), lang varchar(10), notPeriod int) "
         self.conn.execute(tbluser)
         self.conn.commit()
 
-    def add_user(self, userID, locationLAT, locationLONG):
-        stmt = "INSERT INTO users (userID, locationLAT, locationLONG) VALUES (?, ?, ?)"
-        args = (userID, locationLAT, locationLONG)
+    def add_user(self, userID, locationLAT, locationLONG, lang):
+        stmt = "INSERT INTO users (userID, locationLAT, locationLONG, lang) VALUES (?, ?, ?, ?)"
+        args = (userID, locationLAT, locationLONG, lang)
         self.conn.execute(stmt, args)
         self.conn.commit()
 
