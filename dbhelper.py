@@ -37,16 +37,16 @@ class DBHelper:
         self.conn.commit()
 
     def get_user_long(self, userID):
-        stmt = "SELECT locationLONG FROM items WHERE userID = (?)"
+        stmt = "SELECT locationLONG FROM users WHERE userID = (?)"
         args = (userID, )
-        return self.conn.execute(stmt, args)
+        return [x[0] for x in self.conn.execute(stmt, args)]
 
     def get_user_lat(self, userID):
-        stmt = "SELECT locationLAT FROM items WHERE userID = (?)"
+        stmt = "SELECT locationLAT FROM users WHERE userID = (?)"
         args = (userID, )
-        return self.conn.execute(stmt, args)
+        return [x[0] for x in self.conn.execute(stmt, args)]
 
     def get_user_notPeriod(self, userID):
-        stmt = "SELECT notPeriod FROM items WHERE userID = (?)"
+        stmt = "SELECT notPeriod FROM users WHERE userID = (?)"
         args = (userID, )
         return self.conn.execute(stmt, args)

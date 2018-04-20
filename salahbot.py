@@ -3,9 +3,13 @@ import requests
 import time
 import urllib
 
+from datetime import datetime
 from dbhelper import DBHelper
+from praytimes import PrayTimes
 
 db = DBHelper()
+pt = PrayTimes()
+now = datetime.now()
 
 pretext = None
 
@@ -63,18 +67,28 @@ def handle_updates(updates):
                         "istediğin bir ayet veya sure gösterebilirim. Komut olarak da /ezan yazarak ezan vaktine kaç "
                         "dakika kaldığını, /sure yazarak sureleri ve /ayarlar yazarak bot tercihlerini "
                         "değiştirebilirsin.", chat, keyboard)
-                elif text == "ayarlar":
+                elif text == "ayarlar" or text == "/ayarlar":
                     textkeyboard = ["dil", "konum", "bildirim"]
                     keyboard = build_keyboard(textkeyboard)
                     send_message(
                         "Tercihlerini değiştirmek için aşağıdakilerden birisini seçebilirsin veya bir dahaki sefere "
                         "direk bunları bana yazabilirsin.", chat, keyboard)
-                elif text == "konum":
+                elif text == "konum" or text == "/konum":
                     keyboard = build_keyboard_for_location()
                     send_message(
                         "Aşağıdaki tuşa basarak konumunuzu gönderebilirsiniz.", chat, keyboard)
                 elif pretext == "konum":
                     print("pretext1 kullanıldı")
+                elif text == "kaldı" or text == "/ezan":
+                    userLON = db.get_user_long(update["message"]["from"]["id"])[0]
+                    userLAT = db.get_user_lat(update["message"]["from"]["id"])[0]
+                    prayTimeName = get_closest_praytime_with_time((now.year, now.month, now.day), (userLAT, userLON), +3)['closest_time']
+                    prayTimeRema = get_closest_praytime_with_time((now.year, now.month, now.day), (userLAT, userLON), +3)['remaining_time']
+                    print(prayTimeRema)
+                    if prayTimeRema[1:] == '0':
+                        send_message(prayTimeName + " ezanına " + prayTimeRema[2:4] + " dakika kaldı.", chat)
+                    else:
+                        send_message(prayTimeName + " ezanına " + prayTimeRema[:1] + " saat, " + prayTimeRema[2:4] + " dakika kaldı.", chat)
                 pretext = text
         except KeyError:
             pass
@@ -111,15 +125,47 @@ def send_message(text, chat_id, reply_markup=None):
     print(url)
 
 
+def get_closest_praytime_with_time(date, coordinates, timeZone):
+    allpraytimes = pt.getTimes(date, coordinates, timeZone)
+    praytimearray = ['imsak', 'fajr', 'sunrise', 'dhuhr', 'asr', 'sunset', 'maghrib', 'isha', 'midnight']
+    for temptimename in praytimearray:
+        closesttime = temptimename
+        if now.strftime('%H:%M') < allpraytimes[temptimename]:
+            break
+        date_format = "%H:%M"
+    timenow = datetime.strptime(now.strftime('%H:%M'), date_format)
+    timepray = datetime.strptime(allpraytimes[closesttime], date_format)
+    tremain = str((timepray - timenow))
+    if (closesttime == "imsak"):
+        closesttime = "İmsak"
+    elif (closesttime == "fajr"):
+        closesttime = "Sabah"
+    elif (closesttime == "sunrise"):
+        closesttime = "Gündoğumu"
+    elif (closesttime == "dhuhr"):
+        closesttime = "Öğle"
+    elif (closesttime == "asr"):
+        closesttime = "İkindi"
+    elif (closesttime == "sunset"):
+        closesttime = "Günbatımı"
+    elif (closesttime == "maghrib"):
+        closesttime = "Akşam"
+    elif (closesttime == "isha"):
+        closesttime = "Yatsı"
+    elif (closesttime == "midnight"):
+        closesttime = "Gece yarısı"
+    return {'closest_time': closesttime, 'remaining_time': tremain}
+
+
 def main():
     db.setup()
     last_update_id = None
-    previous_update = None
     while True:
         updates = get_updates(last_update_id)
         if len(updates["result"]) > 0:
             last_update_id = get_last_update_id(updates) + 1
             handle_updates(updates)
+
         time.sleep(0.5)
 
 
