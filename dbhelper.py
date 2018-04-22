@@ -8,13 +8,19 @@ class DBHelper:
 
     def setup(self):
         tbluser = "CREATE TABLE IF NOT EXISTS users (userID varchar(20), locationLAT decimal(9,6), locationLONG " \
-                  "decimal(9,6), lang varchar(10), notPeriod int) "
+                  "decimal(9,6), cityName varchar(20), lang varchar(10), notPeriod int) "
         self.conn.execute(tbluser)
         self.conn.commit()
 
     def add_user(self, userID, locationLAT, locationLONG, lang):
         stmt = "INSERT INTO users (userID, locationLAT, locationLONG, lang) SELECT (?), (?), (?), (?) WHERE NOT EXISTS(SELECT 1 FROM users WHERE userID = (?))"
         args = (userID, locationLAT, locationLONG, lang, userID)
+        self.conn.execute(stmt, args)
+        self.conn.commit()
+
+    def add_user_with_cityName(self, userID, locationLAT, locationLONG, cityname, lang):
+        stmt = "INSERT INTO users (userID, locationLAT, locationLONG, cityName, lang) SELECT (?), (?), (?), (?), (?) WHERE NOT EXISTS(SELECT 1 FROM users WHERE userID = (?))"
+        args = (userID, locationLAT, locationLONG, cityname, lang, userID)
         self.conn.execute(stmt, args)
         self.conn.commit()
 
@@ -30,11 +36,22 @@ class DBHelper:
         self.conn.execute(stmt, args)
         self.conn.commit()
 
+    def update_user_location_with_cityName(self, userID, locationLAT, locationLONG, cityName):
+        stmt = "UPDATE users SET locationLAT = (?), locationLONG = (?), cityName = (?)  WHERE userID = (?)"
+        args = (locationLAT, locationLONG, cityName, userID)
+        self.conn.execute(stmt, args)
+        self.conn.commit()
+
     def update_user_notification_rate(self, userID, notPeriod):
         stmt = "UPDATE users SET notPeriod = (?) WHERE userID = (?)"
         args = (notPeriod, userID)
         self.conn.execute(stmt, args)
         self.conn.commit()
+
+    def get_user_cityName(self, userID):
+        stmt = "SELECT cityName FROM users WHERE userID = (?)"
+        args = (userID, )
+        return [x[0] for x in self.conn.execute(stmt, args)]
 
     def get_user_long(self, userID):
         stmt = "SELECT locationLONG FROM users WHERE userID = (?)"
