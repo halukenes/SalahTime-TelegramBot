@@ -1,0 +1,1 @@
+bot: python salahbot.py thin start -p $PORT

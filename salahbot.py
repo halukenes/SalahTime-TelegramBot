@@ -6,6 +6,7 @@ import urllib
 from datetime import datetime
 from dbhelper import DBHelper
 from praytimes import PrayTimes
+from surahtmlparser import HTMLParser
 
 db = DBHelper()
 pt = PrayTimes()

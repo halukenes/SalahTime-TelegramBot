@@ -2,8 +2,8 @@ import sqlite3
 
 
 class DBHelper:
-    def __init__(self, dbname="userdata.sqlite"):
-        self.dbname = dbname
+    def __init__(self, filedir):
+        self.filedir = filedir
         self.conn = sqlite3.connect(dbname)
 
     def setup(self):
