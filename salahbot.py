@@ -70,7 +70,7 @@ def handle_updates(updates):
             else:
                 text = update["message"]["text"]
                 chat = update["message"]["chat"]["id"]
-                if text == "/start" or text == "merhaba" or text == "/yardim":
+                if text == "/start" or text.lower() == "merhaba" or text == "/yardim":
                     textkeyboard = ["/ezan", "/sure", "/ayarlar"]
                     keyboard = build_keyboard(textkeyboard)
                     send_message(
@@ -80,7 +80,7 @@ def handle_updates(updates):
                         "değiştirebilirsin.", chat, keyboard)
                     prechoi = 0
                     predelloc = 0
-                elif text == "ayarlar" or text == "/ayarlar":
+                elif text.lower() == "ayarlar" or text == "/ayarlar":
                     textkeyboard = ["/dil", "/konum", "/bildirim"]
                     keyboard = build_keyboard(textkeyboard)
                     send_message(
@@ -136,7 +136,7 @@ def handle_updates(updates):
                         predelloc = 0
                     prechoi = 0
                 elif len(set(text.split(" ")).intersection(
-                        set(praytimekeywordsTR))) > 1 or text == 'ezan' or text == '/ezan' or prechoi == 1:
+                        set(praytimekeywordsTR))) > 1 or text == 'ezan' or text.lower() == '/ezan' or prechoi == 1:
                     if not db.get_user_lat(update["message"]["from"]["id"]) and prechoi != 1:
                         send_message(
                             "Konum tercihlerini bilmiyorum. O yüzden ezan vakti için istediğin şehirin ismini yazabilirsin veya 'konumum' yazarak konumunu gönderebilirsin.",
