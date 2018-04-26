@@ -6,9 +6,11 @@ import urllib
 from datetime import datetime
 from dbhelper import DBHelper
 from praytimes import PrayTimes
+from googleplacesparser import GooglePlaceParser
 from surahtmlparser import HTMLParser
 
 db = DBHelper()
+gpp = GooglePlaceParser()
 pt = PrayTimes()
 now = datetime.now()
 
@@ -55,21 +57,18 @@ def handle_updates(updates):
     global predelloc
     for update in updates["result"]:
         try:
+            chat = update["message"]["chat"]["id"]
             if "location" in update["message"]:
-                if not db.get_user_lat(update["message"]["from"]["id"]):
-                    db.add_user(update["message"]["from"]["id"],
-                                update["message"]["location"]["latitude"],
-                                update["message"]["location"]["longitude"],
-                                "tur")
+                user_lat = update["message"]["location"]["latitude"]
+                user_lng = update["message"]["location"]["longitude"]
+                if not db.get_user_lat(chat):
+                    db.add_user(chat, user_lat, user_lng, "tur", gpp.get_gmt_location(user_lat, user_lng))
                 else:
-                    db.update_user_location(update["message"]["from"]["id"],
-                                            update["message"]["location"]["latitude"],
-                                            update["message"]["location"]["longitude"])
+                    db.update_user_location(chat, user_lat, user_lng)
                 prechoi = 0
                 predelloc = 0
             else:
                 text = update["message"]["text"]
-                chat = update["message"]["chat"]["id"]
                 if text == "/start" or text.lower() == "merhaba" or text == "/yardim":
                     textkeyboard = ["/ezan", "/sure", "/ayarlar"]
                     keyboard = build_keyboard(textkeyboard)
@@ -95,7 +94,7 @@ def handle_updates(updates):
                     prechoi = 0
                     predelloc = 0
                 elif text == "/konum":
-                    if not db.get_user_lat(update["message"]["from"]["id"]):
+                    if not db.get_user_lat(chat):
                         send_message(
                             "Önceden belirlediğin bir konum yok, benden ezan vakitlerini istediğin zaman konumunu da belirleyebilirsin.",
                             chat)
@@ -106,7 +105,9 @@ def handle_updates(updates):
                                 "Konum tercihlerini önceden belirlemişsin, eğer değiştirmek veya silmek istiyorsan 'sil' yazabilirsin.",
                                 chat)
                         else:
-                            send_message("Konum tercihlerini önceden belirlemişsin: '" + str(db.get_user_cityName(chat)[0]) + "', eğer bunu silmek istiyorsan 'sil' yazabilirsin.", chat)
+                            send_message("Konum tercihlerini önceden belirlemişsin: '" + str(
+                                db.get_user_cityName(chat)[0]) + "', eğer bunu silmek istiyorsan 'sil' yazabilirsin.",
+                                         chat)
 
                     predelloc = 1
                     prechoi = 0
@@ -137,36 +138,37 @@ def handle_updates(updates):
                     prechoi = 0
                 elif len(set(text.split(" ")).intersection(
                         set(praytimekeywordsTR))) > 1 or text == 'ezan' or text.lower() == '/ezan' or prechoi == 1:
-                    if not db.get_user_lat(update["message"]["from"]["id"]) and prechoi != 1:
+                    if not db.get_user_lat(chat) and prechoi != 1:
                         send_message(
                             "Konum tercihlerini bilmiyorum. O yüzden ezan vakti için istediğin şehirin ismini yazabilirsin veya 'konumum' yazarak konumunu gönderebilirsin.",
                             chat)
                         prechoi = 1
                         predelloc = 0
                     elif prechoi == 1:
-                        if not db.get_city_lat(text):
+                        if not gpp.get_location_ofcity(text)[2] == "OK":
                             send_message("Bu şehiri bulamadım, tekrar denemek ister misin?", chat)
                         else:
                             prechoi = 0;
-                            userLON = db.get_city_lng(text)[0]
-                            userLAT = db.get_city_lat(text)[0]
-                            if not db.get_user_lat(update["message"]["from"]["id"]):
-                                db.add_user_with_cityName(update["message"]["from"]["id"],
+                            userLON = gpp.get_location_ofcity(text)[1]
+                            userLAT = gpp.get_location_ofcity(text)[0]
+                            gmt = gpp.get_location_ofcity(text)[3]
+                            if not db.get_user_lat(chat):
+                                db.add_user_with_cityName(chat,
                                                           userLAT,
                                                           userLON, text,
-                                                          "tur")
+                                                          "tur", gmt)
                             else:
-                                db.update_user_location_with_cityName(update["message"]["from"]["id"],
+                                db.update_user_location_with_cityName(chat,
                                                                       userLAT,
                                                                       userLON, text)
                             prayTime = \
-                                get_closest_praytime_with_time((now.year, now.month, now.day), (userLAT, userLON), +3)[
+                                get_closest_praytime_with_time((now.year, now.month, now.day), (userLAT, userLON), gmt)[
                                     'pray_time']
                             prayTimeName = \
-                                get_closest_praytime_with_time((now.year, now.month, now.day), (userLAT, userLON), +3)[
+                                get_closest_praytime_with_time((now.year, now.month, now.day), (userLAT, userLON), gmt)[
                                     'closest_time']
                             prayTimeRema = \
-                                get_closest_praytime_with_time((now.year, now.month, now.day), (userLAT, userLON), +3)[
+                                get_closest_praytime_with_time((now.year, now.month, now.day), (userLAT, userLON), gmt)[
                                     'remaining_time']
                             send_message(
                                 text + " için " + prayTimeName + " ezanının vakti " + prayTime + ", " + prayTimeName + " ezanına " + prayTimeRema[
@@ -174,16 +176,17 @@ def handle_updates(updates):
                                                                                                                                                        2:4] + " dakika kaldı.",
                                 chat)
                     else:
-                        userLON = db.get_user_long(update["message"]["from"]["id"])[0]
-                        userLAT = db.get_user_lat(update["message"]["from"]["id"])[0]
+                        userLON = db.get_user_long(chat)[0]
+                        userLAT = db.get_user_lat(chat)[0]
+                        gmt = db.get_gmt(chat)[0]
                         prayTime = \
-                            get_closest_praytime_with_time((now.year, now.month, now.day), (userLAT, userLON), +3)[
+                            get_closest_praytime_with_time((now.year, now.month, now.day), (userLAT, userLON), gmt)[
                                 'pray_time']
                         prayTimeName = \
-                            get_closest_praytime_with_time((now.year, now.month, now.day), (userLAT, userLON), +3)[
+                            get_closest_praytime_with_time((now.year, now.month, now.day), (userLAT, userLON), gmt)[
                                 'closest_time']
                         prayTimeRema = \
-                            get_closest_praytime_with_time((now.year, now.month, now.day), (userLAT, userLON), +3)[
+                            get_closest_praytime_with_time((now.year, now.month, now.day), (userLAT, userLON), gmt)[
                                 'remaining_time']
                         send_message(
                             prayTimeName + " ezanının vakti " + prayTime + ", " + prayTimeName + " ezanına " + prayTimeRema[
@@ -231,7 +234,7 @@ def send_message(text, chat_id, reply_markup=None):
 
 def get_closest_praytime_with_time(date, coordinates, timeZone):
     allpraytimes = pt.getTimes(date, coordinates, timeZone)
-    praytimearray = ['imsak', 'fajr', 'sunrise', 'dhuhr', 'asr', 'sunset', 'maghrib', 'isha', 'midnight']
+    praytimearray = ['imsak', 'fajr', 'sunrise', 'dhuhr', 'asr', 'maghrib', 'isha']
     for temptimename in praytimearray:
         closesttime = temptimename
         if now.strftime('%H:%M') < allpraytimes[temptimename]:
@@ -239,6 +242,7 @@ def get_closest_praytime_with_time(date, coordinates, timeZone):
     date_format = "%H:%M"
     timenow = datetime.strptime(now.strftime('%H:%M'), date_format)
     timepray = datetime.strptime(allpraytimes[closesttime], date_format)
+    print(allpraytimes['maghrib'])
     praytime = allpraytimes[closesttime]
     tremain = str((timepray - timenow))
     if (closesttime == "imsak"):
@@ -251,14 +255,10 @@ def get_closest_praytime_with_time(date, coordinates, timeZone):
         closesttime = "Öğle"
     elif (closesttime == "asr"):
         closesttime = "İkindi"
-    elif (closesttime == "sunset"):
-        closesttime = "Günbatımı"
     elif (closesttime == "maghrib"):
         closesttime = "Akşam"
     elif (closesttime == "isha"):
         closesttime = "Yatsı"
-    elif (closesttime == "midnight"):
-        closesttime = "Gece yarısı"
     return {'closest_time': closesttime, 'remaining_time': tremain, 'pray_time': praytime}
 
 

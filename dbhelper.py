@@ -8,19 +8,19 @@ class DBHelper:
 
     def setup(self):
         tbluser = "CREATE TABLE IF NOT EXISTS users (userID varchar(20), locationLAT decimal(9,6), locationLONG " \
-                  "decimal(9,6), cityName varchar(20), lang varchar(10), notPeriod int) "
+                  "decimal(9,6), gmt int, cityName varchar(20), lang varchar(10), notPeriod int) "
         self.conn.execute(tbluser)
         self.conn.commit()
 
-    def add_user(self, userID, locationLAT, locationLONG, lang):
+    def add_user(self, userID, locationLAT, locationLONG, lang, gmt):
         stmt = "INSERT INTO users (userID, locationLAT, locationLONG, lang) SELECT (?), (?), (?), (?) WHERE NOT EXISTS(SELECT 1 FROM users WHERE userID = (?))"
         args = (userID, locationLAT, locationLONG, lang, userID)
         self.conn.execute(stmt, args)
         self.conn.commit()
 
-    def add_user_with_cityName(self, userID, locationLAT, locationLONG, cityname, lang):
-        stmt = "INSERT INTO users (userID, locationLAT, locationLONG, cityName, lang) SELECT (?), (?), (?), (?), (?) WHERE NOT EXISTS(SELECT 1 FROM users WHERE userID = (?))"
-        args = (userID, locationLAT, locationLONG, cityname, lang, userID)
+    def add_user_with_cityName(self, userID, locationLAT, locationLONG, cityname, lang, gmt):
+        stmt = "INSERT INTO users (userID, locationLAT, locationLONG, gmt, cityName, lang) SELECT (?), (?), (?), (?), (?), (?) WHERE NOT EXISTS(SELECT 1 FROM users WHERE userID = (?))"
+        args = (userID, locationLAT, locationLONG, gmt, cityname, lang, userID)
         self.conn.execute(stmt, args)
         self.conn.commit()
 
@@ -76,4 +76,9 @@ class DBHelper:
     def get_city_lat(self, cityname):
         stmt = "SELECT lat FROM pk_il WHERE il_adi = (?) COLLATE NOCASE"
         args = (cityname,)
+        return [x[0] for x in self.conn.execute(stmt, args)]
+
+    def get_gmt(self, userID):
+        stmt = "SELECT gmt FROM users WHERE userID = (?)"
+        args = (userID,)
         return [x[0] for x in self.conn.execute(stmt, args)]
