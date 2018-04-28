@@ -22,6 +22,7 @@ TOKEN = "584920327:AAGKd2EDjQyIwyEwLalcMBnlMYZj6xF3K_s"
 URL = "https://api.telegram.org/bot{}/".format(TOKEN)
 
 praytimekeywordsTR = ['ezan', 'ne', 'zaman', 'kaç dakika kaldı', 'okunmasına', 'ezana', 'ezanın', 'kaçta']
+allpraytimekeywordsTR = ['ezanları', 'tüm', 'bugünki', 'vakitlerini', 'vakitleri', 'saatleri']
 
 
 def get_url(url):
@@ -137,14 +138,14 @@ def handle_updates(updates):
                         predelloc = 0
                     prechoi = 0
                 elif len(set(text.split(" ")).intersection(
-                        set(praytimekeywordsTR))) > 1 or text == 'ezan' or text.lower() == '/ezan' or prechoi == 1:
-                    if not db.get_user_lat(chat) and prechoi != 1:
+                        set(praytimekeywordsTR))) > 1 or text == 'ezan' or text.lower() == '/ezan' or prechoi == 10:
+                    if not db.get_user_lat(chat) and prechoi != 10:
                         send_message(
                             "Konum tercihlerini bilmiyorum. O yüzden ezan vakti için istediğin şehirin ismini yazabilirsin veya 'konumum' yazarak konumunu gönderebilirsin.",
                             chat)
-                        prechoi = 1
+                        prechoi = 10
                         predelloc = 0
-                    elif prechoi == 1:
+                    elif prechoi == 10:
                         if not gpp.get_location_ofcity(text)[2] == "OK":
                             send_message("Bu şehiri bulamadım, tekrar denemek ister misin?", chat)
                         else:
@@ -194,6 +195,37 @@ def handle_updates(updates):
                                                                                                                                 2:4] + " dakika kaldı.",
                             chat)
                     predelloc = 0
+                elif len(set(text.split(" ")).intersection(set(allpraytimekeywordsTR))) > 1 or prechoi == 11:
+                    if not db.get_user_lat(chat) and prechoi != 11:
+                        send_message(
+                            "Konum tercihlerini bilmiyorum. O yüzden ezan vakti için istediğin şehirin ismini yazabilirsin veya 'konumum' yazarak konumunu gönderebilirsin.",
+                            chat)
+                        prechoi = 11
+                        predelloc = 0
+                    elif prechoi == 11:
+                        if not gpp.get_location_ofcity(text)[2] == "OK":
+                            send_message("Bu şehiri bulamadım, tekrar denemek ister misin?", chat)
+                        else:
+                            prechoi = 0;
+                            userLON = gpp.get_location_ofcity(text)[1]
+                            userLAT = gpp.get_location_ofcity(text)[0]
+                            gmt = gpp.get_location_ofcity(text)[3]
+                            if not db.get_user_lat(chat):
+                                db.add_user_with_cityName(chat,
+                                                          userLAT,
+                                                          userLON, text,
+                                                          "tur", gmt)
+                            else:
+                                db.update_user_location_with_cityName(chat,
+                                                                      userLAT,
+                                                                      userLON, text)
+                            send_message(get_all_pray_times((now.year, now.month, now.day), (userLAT, userLON), gmt) ,chat)
+                    else:
+                        userLON = db.get_user_long(chat)[0]
+                        userLAT = db.get_user_lat(chat)[0]
+                        gmt = db.get_gmt(chat)[0]
+                        send_message(get_all_pray_times((now.year, now.month, now.day), (userLAT, userLON), gmt), chat)
+                    predelloc = 0
                 else:
                     send_message("Ne demek istediğini anlayamadım, istersen /yardim yazabilirsin", chat)
                     prechoi = 0
@@ -232,6 +264,18 @@ def send_message(text, chat_id, reply_markup=None):
     get_url(url)
 
 
+def get_all_pray_times(date, coordinates, timeZone):
+    allpraytimes = pt.getTimes(date, coordinates, timeZone)
+    selectedpraytimes = "İmsak : " + allpraytimes['imsak'] + \
+                        "\nSabah : " + allpraytimes['fajr'] + \
+                        "\nGündoğumu : " + allpraytimes['sunrise'] + \
+                        "\nÖğle : " + allpraytimes['dhuhr'] + \
+                        "\nİkindi : " + allpraytimes['asr'] + \
+                        "\nAkşam : " + allpraytimes['maghrib'] + \
+                        "\nYatsı : " + allpraytimes['isha']
+    return selectedpraytimes
+
+
 def get_closest_praytime_with_time(date, coordinates, timeZone):
     allpraytimes = pt.getTimes(date, coordinates, timeZone)
     praytimearray = ['imsak', 'fajr', 'sunrise', 'dhuhr', 'asr', 'maghrib', 'isha']
@@ -242,9 +286,9 @@ def get_closest_praytime_with_time(date, coordinates, timeZone):
     date_format = "%H:%M"
     timenow = datetime.strptime(now.strftime('%H:%M'), date_format)
     timepray = datetime.strptime(allpraytimes[closesttime], date_format)
-    print(allpraytimes['maghrib'])
     praytime = allpraytimes[closesttime]
     tremain = str((timepray - timenow))
+    print(tremain)
     if (closesttime == "imsak"):
         closesttime = "İmsak"
     elif (closesttime == "fajr"):
