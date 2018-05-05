@@ -40,13 +40,10 @@ class GooglePlaceParser:
         placejson = self.get_json(placename)
         if not placejson["status"] == "ZERO_RESULTS":
             lat_place = placejson["results"][0]["geometry"]["location"]["lat"]
-            print(lat_place)
             lng_place = placejson["results"][0]["geometry"]["location"]["lng"]
-            print(lng_place)
             jsonresult = placejson["status"]
             timezoneplace = self.get_json_timezone(lat_place, lng_place)
             place_gmt = (int(timezoneplace["rawOffset"]) + int(timezoneplace["dstOffset"]))/3600
-            print(place_gmt)
         else:
             lat_place = None
             lng_place = None

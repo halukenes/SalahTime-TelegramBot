@@ -18,6 +18,12 @@ class DBHelper:
         self.conn.execute(stmt, args)
         self.conn.commit()
 
+    def add_user_with_language(self, userID, lang):
+        stmt = "INSERT INTO users (userID, lang) SELECT (?), (?) WHERE NOT EXISTS(SELECT 1 FROM users WHERE userID = (?))"
+        args = (userID, lang, userID)
+        self.conn.execute(stmt, args)
+        self.conn.commit()
+
     def add_user_with_cityName(self, userID, locationLAT, locationLONG, cityname, lang, gmt):
         stmt = "INSERT INTO users (userID, locationLAT, locationLONG, gmt, cityName, lang) SELECT (?), (?), (?), (?), (?), (?) WHERE NOT EXISTS(SELECT 1 FROM users WHERE userID = (?))"
         args = (userID, locationLAT, locationLONG, gmt, cityname, lang, userID)
@@ -36,9 +42,21 @@ class DBHelper:
         self.conn.execute(stmt, args)
         self.conn.commit()
 
-    def update_user_location_with_cityName(self, userID, locationLAT, locationLONG, cityName):
-        stmt = "UPDATE users SET locationLAT = (?), locationLONG = (?), cityName = (?)  WHERE userID = (?)"
-        args = (locationLAT, locationLONG, cityName, userID)
+    def update_user_location_and_gmt(self, userID, locationLAT, locationLONG, cityName, gmt):
+        stmt = "UPDATE users SET locationLAT = (?), locationLONG = (?), cityName = (?), gmt = (?) WHERE userID = (?)"
+        args = (locationLAT, locationLONG, cityName, gmt, userID)
+        self.conn.execute(stmt, args)
+        self.conn.commit()
+
+    def update_user_language(self, userID, lang):
+        stmt = "UPDATE users SET lang = (?) WHERE userID = (?)"
+        args = (lang, userID)
+        self.conn.execute(stmt, args)
+        self.conn.commit()
+
+    def update_user_location_with_cityName(self, userID, locationLAT, locationLONG, cityName, gmt):
+        stmt = "UPDATE users SET locationLAT = (?), locationLONG = (?), cityName = (?), gmt = (?) WHERE userID = (?)"
+        args = (locationLAT, locationLONG, cityName, gmt, userID)
         self.conn.execute(stmt, args)
         self.conn.commit()
 
@@ -47,6 +65,11 @@ class DBHelper:
         args = (notPeriod, userID)
         self.conn.execute(stmt, args)
         self.conn.commit()
+
+    def get_user_language(self, userID):
+        stmt = "SELECT lang FROM users WHERE userID = (?)"
+        args = (userID,)
+        return [x[0] for x in self.conn.execute(stmt, args)]
 
     def get_user_cityName(self, userID):
         stmt = "SELECT cityName FROM users WHERE userID = (?)"
@@ -66,17 +89,8 @@ class DBHelper:
     def get_user_notPeriod(self, userID):
         stmt = "SELECT notPeriod FROM users WHERE userID = (?)"
         args = (userID, )
-        return self.conn.execute(stmt, args)
-
-    def get_city_lng(self, cityname):
-        stmt = "SELECT lng FROM pk_il WHERE il_adi = (?) COLLATE NOCASE"
-        args = (cityname,)
         return [x[0] for x in self.conn.execute(stmt, args)]
 
-    def get_city_lat(self, cityname):
-        stmt = "SELECT lat FROM pk_il WHERE il_adi = (?) COLLATE NOCASE"
-        args = (cityname,)
-        return [x[0] for x in self.conn.execute(stmt, args)]
 
     def get_gmt(self, userID):
         stmt = "SELECT gmt FROM users WHERE userID = (?)"
