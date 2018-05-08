@@ -8,7 +8,7 @@ class DBHelper:
 
     def setup(self):
         tbluser = "CREATE TABLE IF NOT EXISTS users (userID varchar(20), locationLAT decimal(9,6), locationLONG " \
-                  "decimal(9,6), gmt int, cityName varchar(20), lang varchar(10), notPeriod int) "
+                  "decimal(9,6), gmt int, cityName varchar(20), lang varchar(10), notPeriod int, nextnotTime varchar(20)) "
         self.conn.execute(tbluser)
         self.conn.commit()
 
@@ -66,6 +66,12 @@ class DBHelper:
         self.conn.execute(stmt, args)
         self.conn.commit()
 
+    def update_user_nextnotTime(self, userID, time):
+        stmt = "UPDATE users SET nextnotTime = (?) WHERE userID = (?)"
+        args = (time, userID)
+        self.conn.execute(stmt, args)
+        self.conn.commit()
+
     def get_user_language(self, userID):
         stmt = "SELECT lang FROM users WHERE userID = (?)"
         args = (userID,)
@@ -89,6 +95,11 @@ class DBHelper:
     def get_user_notPeriod(self, userID):
         stmt = "SELECT notPeriod FROM users WHERE userID = (?)"
         args = (userID, )
+        return [x[0] for x in self.conn.execute(stmt, args)]
+
+    def get_users_to_notify(self, time):
+        stmt = "SELECT userID FROM users WHERE nextnotTime = (?)"
+        args = (time, )
         return [x[0] for x in self.conn.execute(stmt, args)]
 
 

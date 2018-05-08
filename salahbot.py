@@ -3,7 +3,7 @@ import requests
 import time
 import urllib
 
-from datetime import datetime
+from datetime import datetime, timedelta
 from dbhelper import DBHelper
 from praytimes import PrayTimes
 from googleplacesparser import GooglePlaceParser
@@ -17,6 +17,7 @@ prelang = 0
 prechoi = 0
 predelloc = 0
 presure = 0
+prenoti = 0
 prechoosesura = None
 prechoosemean = None
 prechooselang = None
@@ -26,16 +27,17 @@ URL = "https://api.telegram.org/bot{}/".format(TOKEN)
 
 praytimekeywords = ['ezan', 'ne', 'zaman', 'kaç dakika kaldı', 'okunmasına', 'ezana', 'ezanın', 'kaçta', 'pray', 'when',
                     'time', 'how many minutes', 'salah time', 'next']
-allpraytimekeywords = ['ezanları', 'ezanlar', 'tüm', 'tümü', 'bugünki', 'vakitlerini', 'vakitleri', 'saatleri', 'pray', 'times',
+allpraytimekeywords = ['ezanları', 'ezanlar', 'hepsi', 'vakitlerinin', 'tüm', 'tümü', 'bugünki', 'vakitlerini', 'vakitleri', 'saatleri', 'pray',
+                       'times',
                        'all',
                        'salah', 'salah times', 'hours', 'salah time', 'when']
 firstkeywords = ['hi', 'hello', 'merhaba', '/start', '/yardim', '/help']
 settingskeywords = ['ayarlar', '/ayarlar', '/settings', 'settings', 'setting']
 sendlocationkeywords = ['konumum', 'send my location', 'my location', 'konumumu gönder']
 locationkeywords = ['/konum', '/location']
-allsurakeywords = ['tüm', 'hepsi', 'tamamı', 'all', 'all of it', 'completely', 'complete']
+allsurakeywords = ['tüm', 'hepsi', 'tamamı', 'tümü', 'all', 'all of it', 'completely', 'complete']
 suraarabicselec = ['arabic', 'arapça', 'arapça olarak', 'in arabic']
-suralangselecti = ['meal', 'meaning', 'mealini', 'the meaning', 'meal olarak', 'meal şeklinde', 'in the meaning']
+suralangselecti = ['meal', 'meaning', 'mealini', 'the meaning', 'meal olarak', 'meal şeklinde', 'in the meaning', 'türkçe', 'turkish']
 readsurakeyword = ['sure oku', 'read sura', '/sura', '/sure', 'sure', 'sura']
 
 
@@ -75,6 +77,7 @@ def handle_updates(updates):
     global prechoosesura
     global prechoosemean
     global prechooselang
+    global prenoti
     now = datetime.now()
     for update in updates["result"]:
         try:
@@ -85,6 +88,7 @@ def handle_updates(updates):
                 db.update_user_location_and_gmt(chat, user_lat, user_lng, None, +3)
                 prechoi = 0
                 predelloc = 0
+                prenoti = 0
                 presure = 0
             else:
                 text = update["message"]["text"]
@@ -112,6 +116,7 @@ def handle_updates(updates):
                     predelloc = 0
                     prelang = 0
                     presure = 0
+                    prenoti = 0
                 elif text in settingskeywords:
                     if db.get_user_language(chat)[0] == "tur":
                         textkeyboard = ["/dil", "/konum", "/bildirim"]
@@ -129,6 +134,7 @@ def handle_updates(updates):
                     predelloc = 0
                     prelang = 0
                     presure = 0
+                    prenoti = 0
                 elif text in sendlocationkeywords:
                     if db.get_user_language(chat)[0] == "tur":
                         keyboard = build_keyboard_for_location('tur')
@@ -140,6 +146,7 @@ def handle_updates(updates):
                     predelloc = 0
                     prelang = 0
                     presure = 0
+                    prenoti = 0
                 elif text in locationkeywords:
                     if db.get_user_language(chat)[0] == "tur":
                         if db.get_user_lat(chat)[0] == None:
@@ -178,6 +185,7 @@ def handle_updates(updates):
                     prechoi = 0
                     prelang = 0
                     presure = 0
+                    prenoti = 0
                 elif predelloc == 2:
                     if text.lower() == "evet" or text.lower() == "yes":
                         if db.get_user_language(chat)[0] == "tur":
@@ -205,6 +213,7 @@ def handle_updates(updates):
                     prechoi = 0
                     prelang = 0
                     presure = 0
+                    prenoti = 0
                 elif predelloc == 1:
                     if db.get_user_language(chat)[0] == "tur":
                         if text.lower() == "sil" or text.lower() == "delete":
@@ -231,6 +240,7 @@ def handle_updates(updates):
                     prechoi = 0
                     prelang = 0
                     presure = 0
+                    prenoti = 0
                 elif len(set(text.split(" ")).intersection(set(
                         praytimekeywords))) > 1 or text == 'ezan' or text.lower() == '/ezan' or text == 'salah' or text.lower() == '/salah' or prechoi == 10:
                     if db.get_user_language(chat)[0] == "tur":
@@ -287,7 +297,7 @@ def handle_updates(updates):
                                     'remaining_time']
                             send_message(
                                 prayTimeName + " ezanının vakti " + prayTime + ", " + prayTimeName + " ezanına " + prayTimeRema[
-                                                                                                                   :1] + "saat, " + prayTimeRema[
+                                                                                                                   :1] + " saat, " + prayTimeRema[
                                                                                                                                     2:4] + " dakika kaldı.",
                                 chat)
                     elif db.get_user_language(chat)[0] == "en":
@@ -351,6 +361,7 @@ def handle_updates(updates):
                     predelloc = 0
                     prelang = 0
                     presure = 0
+                    prenoti = 0
                 elif len(set(text.split(" ")).intersection(set(allpraytimekeywords))) > 1 or prechoi == 11:
                     if db.get_user_language(chat)[0] == "tur":
                         if db.get_user_lat(chat)[0] == None and prechoi != 11:
@@ -415,6 +426,7 @@ def handle_updates(updates):
                     predelloc = 0
                     prelang = 0
                     presure = 0
+                    prenoti = 0
                 elif text.lower() in readsurakeyword:
                     if db.get_user_language(chat)[0] == "tur":
                         send_message("Hangi sureyi istersin?", chat)
@@ -422,6 +434,7 @@ def handle_updates(updates):
                         send_message("Which sura do you want to look?", chat)
                     presure = 1
                     prelang = 0
+                    prenoti = 0
                 elif presure == 1:
                     prechoosesura = text.lower()
                     if db.get_user_language(chat)[0] == "tur":
@@ -432,6 +445,7 @@ def handle_updates(updates):
                             chat)
                     presure = 2
                     prelang = 0
+                    prenoti = 0
                 elif presure == 2:
                     prechooselang = text.lower()
                     if db.get_user_language(chat)[0] == "tur":
@@ -440,25 +454,28 @@ def handle_updates(updates):
                         send_message("Do you want in Arabic or Turkish meaning", chat)
                     presure = 3
                     prelang = 0
+                    prenoti = 0
                 elif presure == 3:
                     prechoosemean = text.lower()
                     try:
                         if prechooselang in allsurakeywords and prechoosemean.lower() in suraarabicselec:
-                            parser = HTMLParser("suras/" + prechoosesura + ".html")
+                            parser = HTMLParser("suras/" + prechoosesura.lower() + ".html")
                             allsura = parser.get_all_sura_with_text()
                             for verse in allsura:
                                 send_message(str(verse)[6:-7], chat)
                         elif prechooselang in allsurakeywords and prechoosemean.lower() in suralangselecti:
-                            parser = HTMLParser("suras/" + prechoosesura + ".html")
+                            parser = HTMLParser("suras/" + prechoosesura.lower() + ".html")
                             allsura = parser.get_all_sura_with_meaning()
                             for verse in allsura:
                                 send_message(str(verse)[6:-7], chat)
                         elif representsInt(prechooselang) and prechoosemean.lower() in suraarabicselec:
-                            parser = HTMLParser("suras/" + prechoosesura + ".html")
+                            parser = HTMLParser("suras/" + prechoosesura.lower() + ".html")
                             send_message(str(parser.get_text(int(prechooselang))), chat)
                         elif representsInt(prechooselang) and prechoosemean.lower() in suralangselecti:
-                            parser = HTMLParser("suras/" + prechoosesura + ".html")
+                            parser = HTMLParser("suras/" + prechoosesura.lower() + ".html")
                             send_message(str(parser.get_meaning(int(prechooselang))), chat)
+                        else:
+                            send_message("Sanırım bir yerlerde hata yaptın, tekrar denemek ister misin?", chat)
                     except FileNotFoundError:
                         if db.get_user_language(chat)[0] == "en":
                             send_message("I couldn't find the sura you wanted, would you like to try again?", chat)
@@ -476,6 +493,7 @@ def handle_updates(updates):
                         pass
                     presure = 0
                     prelang = 0
+                    prenoti = 0
                 elif text == "/language" or text == "/dil":
                     if db.get_user_language(chat)[0] == "tur":
                         send_message("Dil ayarın Türkçe olarak ayarlı, dil tercihini değiştirmek istiyorsan 'english' "
@@ -489,16 +507,73 @@ def handle_updates(updates):
                     presure = 0
                     prechoi = 0
                     predelloc = 0
+                    prenoti = 0
                 elif prelang == 10 and text == "english":
                     db.update_user_language(chat, "en")
                     send_message("Language has been changed to English", chat)
                     prelang = 0
                     presure = 0
+                    prenoti = 0
                 elif prelang == 11 and text == "turkish":
                     db.update_user_language(chat, "tur")
                     send_message("Dil Türkçe olarak değiştirildi.", chat)
                     prelang = 0
                     presure = 0
+                    prenoti = 0
+                elif text == "/bildirim" or text == "/notification":
+                    if db.get_user_notPeriod(chat)[0] == None or db.get_user_notPeriod(chat)[0] == 0:
+                        if db.get_user_language(chat)[0] == "tur":
+                            send_message(
+                                "Bildirim tercihlerini bilmiyorum; ezan vaktinden kaç dakika öncesinde bildirim "
+                                "almak istiyorsun? (1-60 dakika arası)", chat)
+                        elif db.get_user_language(chat)[0] == "en":
+                            send_message(
+                                "I do not know the notification preferences. How many minutes do you want to be notified before a salah time? (1-60 minutes)",
+                                chat)
+                    else:
+                        if db.get_user_language(chat)[0] == "tur":
+                            send_message("Bildirim tercihini " + str(db.get_user_notPeriod(chat)) + " dakika olarak "
+                                                                                                    "ayarlamışsın, "
+                                                                                                    "değiştirmek için "
+                                                                                                    "1-60 dakika arası "
+                                                                                                    "tercihini "
+                                                                                                    "yazabilirsin. '0' yazarak da bildirimi kapatabilirsin.",
+                                         chat)
+                        elif db.get_user_language(chat)[0] == "en":
+                            send_message("You set the notification preference to " + str(db.get_user_notPeriod(
+                                chat)) + " minutes, you can write your choice between 1-60 minutes to change. You can write '0' to close notifications.",
+                                         chat)
+                    prechoi = 0
+                    predelloc = 0
+                    presure = 0
+                    prelang = 0
+                    prenoti = 10
+                elif prenoti == 10:
+                    userLON = db.get_user_long(chat)[0]
+                    userLAT = db.get_user_lat(chat)[0]
+                    gmt = db.get_gmt(chat)[0]
+                    prayTime = get_closest_praytime_with_time((now.year, now.month, now.day), (userLAT, userLON), gmt,
+                                                              (db.get_user_language(chat)[0]))['pray_time']
+                    if representsInt(text):
+                        db.update_user_notification_rate(chat, int(text))
+                        if db.get_user_language(chat)[0] == "tur":
+                            send_message("Bildirim tercihini " + text + " dakika olarak ayarlandı.", chat)
+                        elif db.get_user_language(chat)[0] == "en":
+                            send_message("Notification preference is set to " + text + " minutes.", chat)
+                        if text == "0":
+                            db.update_user_nextnotTime(".")
+                        else:
+                            set_user_nextNotPeriod(chat, prayTime)
+                    else:
+                        if db.get_user_language(chat)[0] == "tur":
+                            send_message("Bildirim tercihlerinden çıktım.", chat)
+                        elif db.get_user_language(chat)[0] == "en":
+                            send_message("I'm out of the notification preferences.", chat)
+                    prenoti = 0
+                    prechoi = 0
+                    predelloc = 0
+                    presure = 0
+                    prelang = 0
                 else:
                     if db.get_user_language(chat)[0] == "tur":
                         send_message("Ne demek istediğini anlayamadım, istersen /yardim yazabilirsin", chat)
@@ -508,6 +583,7 @@ def handle_updates(updates):
                     predelloc = 0
                     presure = 0
                     prelang = 0
+                    prenoti = 0
                 pretext = text
         except KeyError:
             pass
@@ -578,10 +654,17 @@ def get_closest_praytime_with_time(date, coordinates, timeZone, lan):
     allpraytimes = pt.getTimes(date, coordinates, timeZone)
     praytimearray = ['imsak', 'sunrise', 'dhuhr', 'asr', 'maghrib', 'isha']
     now = datetime.now()
-    for temptimename in praytimearray:
-        closesttime = temptimename
-        if now.strftime('%H:%M') < allpraytimes[temptimename]:
+    nextpray = None
+    for i in range(len(praytimearray)):
+        closesttime = praytimearray[i]
+        if now.strftime('%H:%M') < allpraytimes[praytimearray[i]]:
+            if i != len(praytimearray) - 1:
+                nextpray = allpraytimes[praytimearray[i + 1]]
+            else:
+                nextpray = allpraytimes[praytimearray[0]]
             break
+        if closesttime == 'isha' and now.strftime('%H:%M') > allpraytimes['isha']:
+            closesttime = 'imsak'
     date_format = "%H:%M"
     timenow = datetime.strptime(now.strftime('%H:%M'), date_format)
     timepray = datetime.strptime(allpraytimes[closesttime], date_format)
@@ -602,12 +685,38 @@ def get_closest_praytime_with_time(date, coordinates, timeZone, lan):
             closesttime = "Akşam"
         elif (closesttime == "isha"):
             closesttime = "Yatsı"
+    if tremain[0] == "-":
+        tremain = tremain[8:12]
+    tremain = str((datetime.strptime(tremain, "%H:%M") - timedelta(hours=int(timeZone))).strftime('%H:%M'))[1:]
 
-    return {'closest_time': closesttime, 'remaining_time': tremain, 'pray_time': praytime}
+    return {'closest_time': closesttime, 'remaining_time': tremain, 'pray_time': praytime, 'next_time': nextpray}
 
 
 def hasNumbers(inputString):
     return any(char.isdigit() for char in inputString)
+
+
+def set_user_nextNotPeriod(userID, nextPrayTime):
+    nextNotTime = (datetime.strptime(nextPrayTime, "%H:%M") - timedelta(
+        minutes=int(db.get_user_notPeriod(userID)[0]))).strftime('%H:%M')
+    db.update_user_nextnotTime(userID, str(nextNotTime))
+
+
+def notify_users():
+    now = datetime.now()
+    if db.get_users_to_notify(str(now.strftime('%H:%M'))):
+        users = db.get_users_to_notify(str(now.strftime('%H:%M')))
+        for user in users:
+            if db.get_user_language(user)[0] == "tur":
+                send_message("Sonraki ezan vaktine " + str(db.get_user_notPeriod(user)[0]) + " dakika kaldı.", user)
+            elif db.get_user_language(user)[0] == "en":
+                send_message("There are " + str(db.get_user_notPeriod(user)[0]) + " minutes to next salah time.", user)
+            userLON = db.get_user_long(user)[0]
+            userLAT = db.get_user_lat(user)[0]
+            gmt = db.get_gmt(user)[0]
+            nextprayTime = get_closest_praytime_with_time((now.year, now.month, now.day), (userLAT, userLON), gmt,
+                                                          (db.get_user_language(user)[0]))['next_time']
+            set_user_nextNotPeriod(user, nextprayTime)
 
 
 def main():
@@ -618,6 +727,7 @@ def main():
         if len(updates["result"]) > 0:
             last_update_id = get_last_update_id(updates) + 1
             handle_updates(updates)
+        notify_users()
         time.sleep(0.5)
 
 
