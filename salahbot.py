@@ -491,7 +491,7 @@ def handle_updates(updates):
                             send_message("You set the notification preference to " + str(db.get_user_notPeriod(
                                 chat)) + " minutes, you can write your choice between 1-60 minutes to change. You can write '0' to close notifications. (For exmaple, type '10'.)",
                                          chat)
-                            db.update_user_stage(chat, 40)
+                    db.update_user_stage(chat, 40)
                 elif db.get_stage(chat) == 40:
                     if representsInt(text):
                         db.update_user_notification_rate(chat, int(text))
@@ -512,6 +512,7 @@ def handle_updates(updates):
                             send_message("Bildirim tercihlerinden çıktım. ('/menu' yazabilirsin.)", chat)
                         elif db.get_user_language(chat) == "en":
                             send_message("I'm out of the notification preferences. (You can type '/menu')", chat)
+                        db.update_user_stage(chat, 0)
                 elif db.get_stage(chat) == 41:
                     userLON = db.get_user_long(chat)
                     userLAT = db.get_user_lat(chat)
@@ -536,6 +537,7 @@ def handle_updates(updates):
                         else:
                             set_user_nextNotPeriod(chat, "N")
                         send_message("Your notification settings is completed. (You can type '/menu'", chat)
+                    db.update_user_stage(chat, 0)
                 else:
                     if db.get_user_language(chat) == "tur":
                         send_message("Ne demek istediğini anlayamadım, istersen /yardim yazabilirsin", chat)
@@ -642,25 +644,25 @@ def get_closest_praytime_with_time(date, coordinates, timeZone, lan):
     if lan == "tur":
         if (closesttime == "imsak"):
             closesttime = "İmsak"
-            nextCoded = 1
+            nextCoded = 0
         elif (closesttime == "fajr"):
             closesttime = "Sabah"
-            nextCoded = 2
+            nextCoded = 1
         elif (closesttime == "sunrise"):
             closesttime = "Gündoğumu"
-            nextCoded = 3
+            nextCoded = 2
         elif (closesttime == "dhuhr"):
             closesttime = "Öğle"
-            nextCoded = 4
+            nextCoded = 3
         elif (closesttime == "asr"):
             closesttime = "İkindi"
-            nextCoded = 5
+            nextCoded = 4
         elif (closesttime == "maghrib"):
             closesttime = "Akşam"
-            nextCoded = 6
+            nextCoded = 5
         elif (closesttime == "isha"):
             closesttime = "Yatsı"
-            nextCoded = 0
+            nextCoded = 6
     if tremain[0] == "-":
         tremain = tremain[8:12]
     if isTimewithSecondFormat(tremain):
@@ -702,16 +704,18 @@ def notify_users():
             nextprayTimeRow = get_closest_praytime_with_time((now.year, now.month, now.day),
                                                              (float(userLAT), float(userLON)), gmt,
                                                              (db.get_user_language(user)))
+            print(nextprayTimeRow['closest_time'])
             nextprayTime = nextprayTimeRow['next_time']
             prayTimeCode = nextprayTimeRow['nextCoded']
             tempprayTimeCode = prayTimeCode
             if tempprayTimeCode == 0:
                 tempprayTimeCode = 7
-            if transformtoReminderFormat(db.get_remindCode(user))[tempprayTimeCode - 1] == "1":
+            if db.get_remindCode(user)[tempprayTimeCode - 1] == "1":
                 if db.get_user_language(user) == "tur":
                     send_message("Sonraki ezan vaktine " + str(db.get_user_notPeriod(user)) + " dakika kaldı.", user)
                 elif db.get_user_language(user) == "en":
                     send_message("There are " + str(db.get_user_notPeriod(user)) + " minutes to next salah time.", user)
+            print(str(nextprayTime) + " - " + str(prayTimeCode) + " - " + str(db.get_remindCode(user)[tempprayTimeCode - 1]))
             set_user_nextNotPeriod(user, nextprayTime)
 
 
@@ -769,6 +773,7 @@ def main():
     db.setup()
     last_update_id = None
     print(datetime.now().strftime("%H:%M"))
+    print(str(db.get_remindCode("465066877")))
     while True:
         sendMessage_toAllUsers()
         handle_Reports()

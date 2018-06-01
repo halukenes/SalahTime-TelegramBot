@@ -128,7 +128,7 @@ class DBHelper:
     def get_remindCode(self, userID):
         stmt = "SELECT remindCode FROM users WHERE userID::int = " + str(userID) + ";"
         self.cur.execute(stmt)
-        row = str(self.cur.fetchone())[1:-2]
+        row = str(self.cur.fetchone())[2:-3]
         return row
 
     def get_stage(self, userID):
