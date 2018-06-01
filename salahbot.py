@@ -13,14 +13,7 @@ db = DBHelper()
 gpp = GooglePlaceParser()
 pt = PrayTimes()
 stage = 0
-prelang = 0
-prechoi = 0
-predelloc = 0
-presure = 0
-prenoti = 0
-prechoosesura = None
-prechoosemean = None
-prechooselang = None
+reported = False
 
 TOKEN = "584920327:AAGKd2EDjQyIwyEwLalcMBnlMYZj6xF3K_s"
 URL = "https://api.telegram.org/bot{}/".format(TOKEN)
@@ -134,10 +127,12 @@ def handle_updates(updates):
                                 send_message(
                                     "Konum tercihlerini önceden belirlemişsin, eğer değiştirmek veya silmek istiyorsan 'sil' yazabilirsin.",
                                     chat)
+                                db.update_user_stage(chat, 1)
                             else:
                                 send_message("Konum tercihlerini önceden belirlemişsin: '" + str(
                                     db.get_user_cityName(chat)) + "', eğer bunu silmek istiyorsan 'sil' yazabilirsin.",
                                              chat)
+                                db.update_user_stage(chat, 1)
                     elif db.get_user_language(chat) == "en":
                         if (db.get_user_lat(chat) == 'on' or db.get_user_lat(chat) == '') or db.get_user_lat(
                                 chat) == '':
@@ -151,6 +146,7 @@ def handle_updates(updates):
                                 send_message(
                                     "You have preset location preferences. If you want to change or delete it, you can type 'delete'.",
                                     chat)
+                                db.update_user_stage(chat, 1)
                             else:
                                 send_message("You have preset location preferences: '" + str(
                                     db.get_user_cityName(
@@ -237,6 +233,7 @@ def handle_updates(updates):
                                                                                                                                          :1] + " saat, " + prayTimeRema[
                                                                                                                                                            2:4] + " dakika kaldı.",
                                     chat)
+                                db.update_user_praytimecount(chat)
                         else:
                             userLON = db.get_user_long(chat)
                             userLAT = db.get_user_lat(chat)
@@ -252,6 +249,7 @@ def handle_updates(updates):
                                                                                                                    :1] + " saat, " + prayTimeRema[
                                                                                                                                      2:4] + " dakika kaldı.",
                                 chat)
+                            db.update_user_praytimecount(chat)
                     elif db.get_user_language(chat) == "en":
                         if (db.get_user_lat(chat) == 'on' or db.get_user_lat(chat) == '') and db.get_stage(chat) != 10:
                             send_message(
@@ -283,6 +281,7 @@ def handle_updates(updates):
                                                                                                                                    :1] + " hour, " + prayTimeRema[
                                                                                                                                                      2:4] + "minutes.",
                                     chat)
+                                db.update_user_praytimecount(chat)
                         else:
                             userLON = db.get_user_long(chat)
                             userLAT = db.get_user_lat(chat)
@@ -297,6 +296,7 @@ def handle_updates(updates):
                                          prayTime + ", remaining time is " +
                                          prayTimeRema[:1] + " hour, " +
                                          prayTimeRema[2:4] + "minutes.", chat)
+                            db.update_user_praytimecount(chat)
                 elif len(set(text.split(" ")).intersection(set(allpraytimekeywords))) > 1 or db.get_stage(chat) == 11:
                     if db.get_user_language(chat) == "tur":
                         if (db.get_user_lat(chat) == 'on' or db.get_user_lat(chat) == '') and db.get_stage(chat) != 11:
@@ -330,6 +330,7 @@ def handle_updates(updates):
                                                    gmt,
                                                    db.get_user_language(chat)),
                                 chat)
+                            db.update_user_praytimecount(chat)
                     elif db.get_user_language(chat) == "en":
                         if (db.get_user_lat(chat) == 'on' or db.get_user_lat(chat) == '') and db.get_stage(chat) != 11:
                             send_message(
@@ -354,6 +355,7 @@ def handle_updates(updates):
                                                        gmt,
                                                        db.get_user_language(chat)),
                                     chat)
+                                db.update_user_praytimecount(chat)
                         else:
                             userLON = db.get_user_long(chat)
                             userLAT = db.get_user_lat(chat)
@@ -363,6 +365,7 @@ def handle_updates(updates):
                                                    gmt,
                                                    db.get_user_language(chat)),
                                 chat)
+                            db.update_user_praytimecount(chat)
                 elif text.lower() in readsurakeyword:
                     if db.get_user_language(chat) == "tur":
                         send_message("Hangi sureyi istersin? (Mesela 'Yasin' yazabilirsin.)", chat)
@@ -392,17 +395,25 @@ def handle_updates(updates):
                     db.update_user_pM(chat, text.lower())
                     try:
                         if db.get_pL(chat) in allsurakeywords and db.get_pM(chat).lower() in suraarabicselec:
-                            parser = HTMLParser("suras/" + db.get_pS(chat).lower() + ".html")
-                            allsura = parser.get_all_sura_with_text()
-                            for verse in allsura:
-                                send_message(str(verse)[6:-7], chat)
+                            if db.get_user_language(chat) == "en":
+                                send_message("You can access the link by clicking the link below.", chat,
+                                             build_message_for_SurahLinkTR(db.get_user_language(chat),
+                                                                           db.get_pS(chat).lower()))
+                            elif db.get_user_language(chat) == "tur":
+                                send_message("Aşağıdaki linke tıklayarak sureye erişebilirsin.", chat,
+                                             build_message_for_SurahLinkTR(db.get_user_language(chat),
+                                                                           db.get_pS(chat).lower()))
                             db.update_sura(db.get_pS(chat).lower())
                             db.update_user_readsuraCount(chat)
                         elif db.get_pL(chat) in allsurakeywords and db.get_pM(chat).lower() in suralangselecti:
-                            parser = HTMLParser("suras/" + db.get_pS(chat).lower() + ".html")
-                            allsura = parser.get_all_sura_with_meaning()
-                            for verse in allsura:
-                                send_message(str(verse)[6:-7], chat)
+                            if db.get_user_language(chat) == "en":
+                                send_message("You can access the link by clicking the link below.", chat,
+                                             build_message_for_SurahLinkTR(db.get_user_language(chat),
+                                                                           db.get_pS(chat).lower()))
+                            elif db.get_user_language(chat) == "tur":
+                                send_message("Aşağıdaki linke tıklayarak sureye erişebilirsin.", chat,
+                                             build_message_for_SurahLinkTR(db.get_user_language(chat),
+                                                                           db.get_pS(chat).lower()))
                             db.update_sura(db.get_pS(chat).lower())
                             db.update_user_readsuraCount(chat)
                         elif representsInt(db.get_pL(chat)) and db.get_pM(chat).lower() in suraarabicselec:
@@ -568,6 +579,17 @@ def build_keyboard_for_location(lan):
         reply_markup = {"keyboard": keyboard, "one_time_keyboard": True}
     return json.dumps(reply_markup)
 
+def build_message_for_SurahLinkTR(lan, surahName):
+    if lan == 'tur':
+        inlineKeyboardLink = {"text": surahName + " Suresi", "url": "http://www.kuranmeali.org/kuran/"+surahName+"-suresi/"}
+        keyboard = [[inlineKeyboardLink]]
+        reply_markup = {"inline_keyboard": keyboard}
+    elif lan == 'en':
+        inlineKeyboardLink = {"text": surahName + " Surah", "url": "http://www.kuranmeali.org/kuran/" + surahName + "-suresi/"}
+        keyboard = [[inlineKeyboardLink]]
+        reply_markup = {"inline_keyboard": keyboard}
+    return json.dumps(reply_markup)
+
 
 def send_message(text, chat_id, reply_markup=None):
     text = urllib.parse.quote_plus(text)
@@ -725,12 +747,31 @@ def transformtoReminderFormat(input):
         reminderFormat = reminderFormat + "0"
     return reminderFormat
 
+def sendMessage_toAllUsers():
+    messageText = db.get_message_toSend()
+    users = db.get_users()
+    for user in users:
+        send_message(messageText, str(user)[2:-3])
+    db.delete_specialmessage()
+
+def handle_Reports():
+    global reported
+    if datetime.now().strftime("%H.%M") == "23.55" and reported == False:
+        reportDate = datetime.now().strftime("%d.%m.%Y")
+        db.insert_dailyReport(reportDate)
+        db.update_usersAfterReport()
+        reported = True
+    elif datetime.now().strftime("%H.%M") != "23.55" and reported == True:
+        reported = False
+
 
 def main():
     db.setup()
-    print(db.get_pL(465066877))
     last_update_id = None
+    print(datetime.now().strftime("%H:%M"))
     while True:
+        sendMessage_toAllUsers()
+        handle_Reports()
         updates = get_updates(last_update_id)
         if len(updates["result"]) > 0:
             last_update_id = get_last_update_id(updates) + 1
